@@ -1,0 +1,444 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090b18">
+
+<title>99% Can't Win - Reaction Challenge</title>
+
+<meta name="description" content="Think you have lightning-fast reflexes? Play 99% Can't Win, the addictive free online reaction speed challenge.">
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: #090b18;
+  color: white;
+}
+
+header {
+  text-align: center;
+  padding: 35px 15px;
+  background: linear-gradient(135deg,#211052,#101b3b,#35104d);
+}
+
+header h1 {
+  font-size: clamp(32px,7vw,55px);
+  margin: 0;
+  font-weight: 900;
+}
+
+header h1 span {
+  color: #a78bfa;
+}
+
+header p {
+  color: #c7c3df;
+}
+
+.container {
+  width: min(700px,92%);
+  margin: 30px auto;
+}
+
+.card {
+  background: #15182b;
+  border: 1px solid #343853;
+  border-radius: 20px;
+  padding: 25px;
+  text-align: center;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stat {
+  background: #242743;
+  padding: 13px 20px;
+  border-radius: 12px;
+  color: #c4b5fd;
+  min-width: 110px;
+}
+
+.stat strong {
+  display: block;
+  color: white;
+  font-size: 25px;
+  margin-top: 5px;
+}
+
+#arena {
+  background: #090b18;
+  border: 1px solid #343853;
+  border-radius: 16px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+button {
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  font-weight: bold;
+  transition: .15s;
+}
+
+button:hover {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
+button:active {
+  transform: scale(.96);
+}
+
+.main-btn {
+  padding: 15px 28px;
+  background: #8b5cf6;
+  color: white;
+  font-size: 17px;
+}
+
+#target {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: white;
+  font-size: 20px;
+  box-shadow: 0 0 35px #22c55e66;
+  animation: pop .2s ease;
+}
+
+@keyframes pop {
+  from {transform:scale(.3)}
+  to {transform:scale(1)}
+}
+
+#message {
+  color: #c4b5fd;
+  min-height: 28px;
+  font-weight: bold;
+  margin: 15px 0;
+}
+
+#startBtn {
+  margin: 10px;
+}
+
+#shareBtn {
+  margin: 10px;
+  background: #2563eb;
+  color: white;
+  padding: 14px 22px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+footer {
+  text-align: center;
+  padding: 25px;
+  color: #777;
+  font-size: 13px;
+}
+
+.instructions {
+  color: #aab0ca;
+  line-height: 1.7;
+}
+
+@media(max-width:480px) {
+  .card {padding:15px}
+  #arena {min-height:240px}
+  .stat {min-width:90px;padding:10px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>99% <span>CAN'T WIN</span></h1>
+  <p>⚡ Only the fastest survive. Are you one of them?</p>
+</header>
+
+<main class="container">
+
+<section class="card">
+
+<h2>🔥 The Ultimate Reaction Challenge</h2>
+
+<p class="instructions">
+A green target will appear. Hit it as quickly as possible!
+Every successful click makes the game faster.
+You have 30 seconds. One missed target means GAME OVER.
+</p>
+
+<div class="stats">
+
+<div class="stat">
+  SCORE
+  <strong id="score">0</strong>
+</div>
+
+<div class="stat">
+  TIME
+  <strong id="time">30</strong>
+</div>
+
+<div class="stat">
+  BEST
+  <strong id="best">0</strong>
+</div>
+
+</div>
+
+<div id="arena">
+  <div>
+    <div style="font-size:55px">🎯</div>
+    <p>Ready to test your reflexes?</p>
+  </div>
+</div>
+
+<div id="message">Can you beat the challenge?</div>
+
+<button class="main-btn" id="startBtn">
+START GAME ⚡
+</button>
+
+<button id="shareBtn" class="hidden">
+SHARE YOUR SCORE ↗
+</button>
+
+</section>
+
+</main>
+
+<footer>
+99% CAN'T WIN © 2026 | Free Online Reaction Game
+</footer>
+
+<script>
+
+let score = 0;
+let time = 30;
+let running = false;
+let targetTimer = null;
+let gameTimer = null;
+let best = Number(localStorage.getItem("reactionBest") || 0);
+
+const scoreEl = document.getElementById("score");
+const timeEl = document.getElementById("time");
+const bestEl = document.getElementById("best");
+const arena = document.getElementById("arena");
+const message = document.getElementById("message");
+const startBtn = document.getElementById("startBtn");
+const shareBtn = document.getElementById("shareBtn");
+
+bestEl.textContent = best;
+
+let audioContext;
+
+function sound(frequency = 600) {
+  try {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === "suspended") audioContext.resume();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(.08, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      .001, audioContext.currentTime + .12
+    );
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + .12);
+  } catch(e) {}
+}
+
+function updateScore() {
+  scoreEl.textContent = score;
+}
+
+function startGame() {
+
+  clearInterval(gameTimer);
+  clearTimeout(targetTimer);
+
+  score = 0;
+  time = 30;
+  running = true;
+
+  updateScore();
+
+  timeEl.textContent = time;
+
+  startBtn.classList.add("hidden");
+  shareBtn.classList.add("hidden");
+
+  message.textContent = "GET READY! HIT THE GREEN TARGET!";
+
+  nextTarget();
+
+  gameTimer = setInterval(() => {
+
+    time--;
+
+    timeEl.textContent = time;
+
+    if (time <= 0) {
+      endGame("⏰ TIME'S UP!");
+    }
+
+  },1000);
+
+}
+
+function nextTarget() {
+
+  if (!running) return;
+
+  clearTimeout(targetTimer);
+
+  arena.innerHTML = "";
+
+  const target = document.createElement("button");
+
+  target.id = "target";
+  target.textContent = "TAP!";
+
+  arena.appendChild(target);
+
+  target.onclick = () => {
+
+    if (!running) return;
+
+    clearTimeout(targetTimer);
+
+    score++;
+
+    updateScore();
+
+    sound(650 + score * 15);
+
+    message.textContent = "🔥 GREAT! SCORE: " + score;
+
+    nextTarget();
+
+  };
+
+  // Targets become progressively faster.
+
+  const delay = Math.max(450,1800 - score * 65);
+
+  targetTimer = setTimeout(() => {
+
+    if (running) {
+      endGame("❌ TOO SLOW! THE TARGET DISAPPEARED!");
+    }
+
+  },delay);
+
+}
+
+function endGame(reason) {
+
+  if (!running) return;
+
+  running = false;
+
+  clearInterval(gameTimer);
+  clearTimeout(targetTimer);
+
+  arena.innerHTML = `
+    <div>
+      <div style="font-size:65px">🏆</div>
+      <h2>GAME OVER!</h2>
+      <p>Your score: <strong>${score}</strong></p>
+    </div>
+  `;
+
+  message.textContent = reason;
+
+  if (score > best) {
+
+    best = score;
+
+    localStorage.setItem("reactionBest",best);
+
+    bestEl.textContent = best;
+
+    message.textContent += " NEW PERSONAL BEST! 🎉";
+
+  }
+
+  startBtn.textContent = "PLAY AGAIN 🔄";
+  startBtn.classList.remove("hidden");
+
+  shareBtn.classList.remove("hidden");
+
+}
+
+async function shareScore() {
+
+  const text =
+    `I scored ${score} in 99% Can't Win! ⚡ Can you beat me?`;
+
+  try {
+
+    if (navigator.share) {
+
+      await navigator.share({
+        title: "99% Can't Win",
+        text: text,
+        url: location.href
+      });
+
+    } else {
+
+      await navigator.clipboard.writeText(
+        text + " " + location.href
+      );
+
+      message.textContent = "Score copied! Challenge your friends.";
+
+    }
+
+  } catch(error) {
+
+    message.textContent = "Share your score: " + text;
+
+  }
+
+}
+
+startBtn.addEventListener("click",startGame);
+shareBtn.addEventListener("click",shareScore);
+
+</script>
+
+</body>
+</html>
